@@ -2,20 +2,22 @@
 
 # Function to print usage
 usage() {
-    echo "Usage: $0 --path [path_to_directory] [--include ext1,ext2,...] [--exclude ext1,ext2,...]"
+    echo "Usage: $0 --combine-at [path_to_directory] [--include ext1,ext2,...] [--exclude ext1,ext2,...] [--output-to path_to_output_file]"
     exit 1
 }
 
-# Default values for include and exclude
+# Default values for include, exclude, and output file
 include=()
 exclude=()
+output_file=""
 
 # Parse the command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --path) directory="$2"; shift ;;
+        --combine-at) directory="$2"; shift ;;
         --include) IFS=',' read -r -a include <<< "$2"; shift ;;
         --exclude) IFS=',' read -r -a exclude <<< "$2"; shift ;;
+        --output-to) output_file="$2"; shift ;;
         *) usage ;;
     esac
     shift
@@ -32,8 +34,10 @@ if [ ! -d "$directory" ]; then
     exit 1
 fi
 
-# Create a new file for the output
-output_file="output_$(date +%Y%m%d%H%M%S).txt"
+# Set default output file name if not specified
+if [ -z "$output_file" ]; then
+    output_file="output_$(date +%Y%m%d%H%M%S).txt"
+fi
 
 # Function to check if the file extension is in the include list
 is_included() {
@@ -64,4 +68,6 @@ find "$directory" -type f | while read file; do
     fi
 done
 
-echo "File saved at $output_file"
+# Print the full path of the output file
+absolute_output_path=$(realpath "$output_file")
+echo "File saved at $absolute_output_path"
