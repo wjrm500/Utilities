@@ -12,6 +12,7 @@ exclude_file_types=()
 include_dirs=()
 exclude_dirs=()
 output_file=""
+verbose=0
 
 # Parse the command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -22,6 +23,7 @@ while [[ "$#" -gt 0 ]]; do
         --include-at) IFS=',' read -r -a include_dirs <<< "$2"; shift ;;
         --exclude-at) IFS=',' read -r -a exclude_dirs <<< "$2"; shift ;;
         --output-to) output_file="$2"; shift ;;
+        --verbose) verbose=1 ;;
         *) usage ;;
     esac
     shift
@@ -92,13 +94,23 @@ is_excluded_dir() {
     return 1
 }
 
+# Function to optionally print a message in verbose mode
+verbose_print() {
+    if [ "$verbose" -eq 1 ]; then
+        echo "$1"
+    fi
+}
+
 # Iterate over all files in the given directory and its subdirectories
 find "$directory" -type f | while read file; do
     ext="${file##*.}"
     if is_included_file_type "$ext" && ! is_excluded_file_type "$ext" && is_included_dir "$file" && ! is_excluded_dir "$file"; then
+        verbose_print "Adding $file"
         echo -e "// $file" >> "$output_file"
         cat "$file" >> "$output_file"
         echo -e "\n\n" >> "$output_file"
+    else
+        verbose_print "Skipping $file"
     fi
 done
 
