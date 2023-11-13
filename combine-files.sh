@@ -45,6 +45,9 @@ if [ -z "$output_file" ]; then
     output_file="output_$(date +%Y%m%d%H%M%S).txt"
 fi
 
+# Clear the output file before starting to append data
+> "$output_file"
+
 # Function to check if the file extension is in the include list
 is_included_file_type() {
     local ext=$1
