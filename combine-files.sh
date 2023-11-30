@@ -2,13 +2,13 @@
 
 # Function to print usage
 usage() {
-    echo "Usage: $0 --combine-at [path_to_directory] [--include-file-type ext1,ext2,...] [--exclude-file-type ext1,ext2,...] [--include-at dir1,dir2,...] [--exclude-at dir1,dir2,...] [--output-to path_to_output_file]"
+    echo "Usage: $0 --combine-at [path_to_directory] [--include-pattern pattern1,pattern2,...] [--exclude-pattern pattern1,pattern2,...] [--include-at dir1,dir2,...] [--exclude-at dir1,dir2,...] [--output-to path_to_output_file]"
     exit 1
 }
 
-# Default values for include and exclude file types and directories
-include_file_types=()
-exclude_file_types=()
+# Default values for include and exclude patterns and directories
+include_patterns=()
+exclude_patterns=()
 include_dirs=()
 exclude_dirs=()
 output_file=""
@@ -18,8 +18,8 @@ verbose=0
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --combine-at) directory="$2"; shift ;;
-        --include-file-type) IFS=',' read -r -a include_file_types <<< "$2"; shift ;;
-        --exclude-file-type) IFS=',' read -r -a exclude_file_types <<< "$2"; shift ;;
+        --include-pattern) IFS=',' read -r -a include_patterns <<< "$2"; shift ;;
+        --exclude-pattern) IFS=',' read -r -a exclude_patterns <<< "$2"; shift ;;
         --include-at) IFS=',' read -r -a include_dirs <<< "$2"; shift ;;
         --exclude-at) IFS=',' read -r -a exclude_dirs <<< "$2"; shift ;;
         --output-to) output_file="$2"; shift ;;
@@ -48,21 +48,25 @@ fi
 # Clear the output file before starting to append data
 > "$output_file"
 
-# Function to check if the file extension is in the include list
-is_included_file_type() {
-    local ext=$1
-    [[ ${#include_file_types[@]} -eq 0 ]] && return 0
-    for i in "${include_file_types[@]}"; do
-        [[ "$i" == "$ext" ]] && return 0
+# Function to check if the file matches the include pattern
+is_included_pattern() {
+    local filename=$(basename "$1")
+    [[ ${#include_patterns[@]} -eq 0 ]] && return 0
+    for pattern in "${include_patterns[@]}"; do
+        if [[ "$filename" == $pattern ]]; then
+            return 0
+        fi
     done
     return 1
 }
 
-# Function to check if the file extension is in the exclude list
-is_excluded_file_type() {
-    local ext=$1
-    for e in "${exclude_file_types[@]}"; do
-        [[ "$e" == "$ext" ]] && return 0
+# Function to check if the file matches the exclude pattern
+is_excluded_pattern() {
+    local filename=$(basename "$1")
+    for pattern in "${exclude_patterns[@]}"; do
+        if [[ "$filename" == $pattern ]]; then
+            return 0
+        fi
     done
     return 1
 }
@@ -106,8 +110,7 @@ verbose_print() {
 
 # Iterate over all files in the given directory and its subdirectories
 find "$directory" -type f | while read file; do
-    ext="${file##*.}"
-    if is_included_file_type "$ext" && ! is_excluded_file_type "$ext" && is_included_dir "$file" && ! is_excluded_dir "$file"; then
+    if is_included_pattern "$file" && ! is_excluded_pattern "$file" && is_included_dir "$file" && ! is_excluded_dir "$file"; then
         verbose_print "Adding $file"
         echo -e "// $file" >> "$output_file"
         cat "$file" >> "$output_file"
